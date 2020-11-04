@@ -76,19 +76,36 @@ class MainWindow(QMainWindow):
         self.imageLabel.setText(tracks)
 
     def get_albumCover(self, artist, album):
+        idList = []
         try:
             os.mkdir(self.tempdirname)
         except Exception as e:
             print(f"folder '{self.tempdirname}' already exists")
-        result = musicbrainzngs.search_releases(artist=artist, release=album, limit=1, primarytype = 'Album')
-        ### get album ID
-        id = result["release-list"][0]["id"]
-        print(f"album ID: {id}")
+        result = musicbrainzngs.search_releases(artist=artist, release=album, limit=10, primarytype = 'Album')
+        ### get all album ID
+        for a in result["release-list"]:
+            idList.append(a["id"])
         data = []
-        try:    
-            data = musicbrainzngs.get_image_list(id)
-            url = data["images"][0]["image"]
+        
+        print("idList:", idList)
+        coverList = []
+        for x in range(len(idList)):        
+            try:    
+
+                id = idList[x]
+                print(id)
+                data = musicbrainzngs.get_image_list(id)
+                url = data["images"][0]["image"]
+                coverList.append(url)
+                break
+            except Exception as e:
+                print(e)
+        print(coverList)
+        if len(coverList) > 0:
+            ### download cover
+            url = coverList[0]
             print(f'Cover URL: {url}')
+
             r = requests.get(url, allow_redirects=True)
             if r:
                 self.img = f"{self.tempdirname}/{album}.jpg"
@@ -102,8 +119,6 @@ class MainWindow(QMainWindow):
                     pixmap = QPixmap(self.img)          
                     self.imageLabel.setPixmap(pixmap.scaledToHeight(h, 0))
                     f.close()
-        except Exception as e:
-            print(f"Error: {e}")
         
     def getCover(self):
         self.artist = self.artistEntry.text()
@@ -132,7 +147,7 @@ class MainWindow(QMainWindow):
 
 
     def saveAs(self):
-        fileName, _ = QFileDialog.getSaveFileName(self, "Save File", f"{QDir.homePath()}/{self.album}.jpg", "Images (*.jpg)")
+        fileName, _ = QFileDialog.getSaveFileName(self, "Save File", f"front.jpg", "Images (*.jpg)")
         if fileName:
             if os.path.isfile(self.img):
                 print(f"saving {fileName}")
