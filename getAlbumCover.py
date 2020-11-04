@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
             
     def getTracklist(self, artist, album):
         tracklist = []
-        result = musicbrainzngs.search_releases(artist=artist, release=album, limit=1, primarytype = 'Album')
+        result = musicbrainzngs.search_releases(artist=artist, release=album, limit=1, primarytype = 'Album', strict=True)
         id = result["release-list"][0]["id"]
         print(f'{artist.title()} - {album.title()} ({result["release-list"][0]["date"][:4]})\nTracks:')
         tracklist.append(f'{artist.title()} - {album.title()} ({result["release-list"][0]["date"][:4]})\nTracks:')
@@ -81,30 +81,30 @@ class MainWindow(QMainWindow):
             os.mkdir(self.tempdirname)
         except Exception as e:
             print(f"folder '{self.tempdirname}' already exists")
-        result = musicbrainzngs.search_releases(artist=artist, release=album, limit=10, primarytype = 'Album')
+        result = musicbrainzngs.search_releases(artist=artist, release=album, limit=10, primarytype = 'Album', strict=True)
+        #print(result["release-list"][0])
         ### get all album ID
         for a in result["release-list"]:
             idList.append(a["id"])
         data = []
         
-        print("idList:", idList)
+        #print("idList:", idList)
         coverList = []
         for x in range(len(idList)):        
             try:    
-
                 id = idList[x]
-                print(id)
+                #print(id)
                 data = musicbrainzngs.get_image_list(id)
                 url = data["images"][0]["image"]
                 coverList.append(url)
                 break
             except Exception as e:
                 print(e)
-        print(coverList)
+        print(f"Cover URLs: {coverList}")
         if len(coverList) > 0:
             ### download cover
             url = coverList[0]
-            print(f'Cover URL: {url}')
+            print(f'downloading Cover from URL: {url}')
 
             r = requests.get(url, allow_redirects=True)
             if r:
