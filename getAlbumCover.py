@@ -5,7 +5,7 @@ import os
 from PyQt5.QtCore import (QDir, QSize, Qt)
 from PyQt5.QtGui import QIcon, QKeySequence, QPixmap
 from PyQt5.QtWidgets import (QAction, QApplication, QFileDialog, QMainWindow,
-                             QLabel, QLineEdit, QPushButton, QMessageBox)
+                             QLabel, QLineEdit, QPushButton, QMessageBox, QComboBox)
                             
 import musicbrainzngs
 import requests
@@ -26,6 +26,11 @@ class MainWindow(QMainWindow):
         self.tempdirname = "/tmp/covers"
         self.img = ""
         
+        self.releasesList = []
+        self.releasesListID = []
+        self.releasesTitle = ""
+        self.releasesID = 0
+        
         self.artistEntry = QLineEdit("", placeholderText = "Artist")
         self.artistEntry.setFixedWidth(250)
 
@@ -37,6 +42,14 @@ class MainWindow(QMainWindow):
         
         self.tracklistButton = QPushButton("get Tracklist")
         self.tracklistButton.clicked.connect(self.getTracks)
+        
+        self.releasesButton = QPushButton("get all Artist releases")
+        self.releasesButton.clicked.connect(self.getReleases)
+        self.releasesButton.setFixedWidth(150)
+        
+        self.releasesCombo = QComboBox()
+        self.releasesCombo.setFixedWidth(250)
+        self.releasesCombo.currentIndexChanged.connect(self.setReleaseIndex)
         
         self.imageLabel = QLabel()
         self.imageLabel.setScaledContents(False)
@@ -57,23 +70,56 @@ class MainWindow(QMainWindow):
             "0.1",
             "https://github.com/alastair/python-musicbrainzngs/",)
             
+    def setReleaseIndex(self):
+        self.releasesTitle = self.releasesCombo.currentText()
+        self.releasesID = self.releasesListID[self.releasesCombo.currentIndex()]
+        self.albumEntry.setText(self.releasesCombo.currentText())
+        print(self.releasesTitle, self.releasesID)
+            
+    def getReleases(self):
+        self.artist = self.artistEntry.text()
+        print(f"getting releases of artist '{self.artist}'")
+        self.statusBar().showMessage(f"getting releases of artist '{self.artist}'", 4000)
+        if not self.artist == "":
+            self.getArtistReleases(self.artist)
+        else:
+            print("Artist missing")
+            self.msgbox("Artist missing")
+            
+    def getArtistReleases(self, artist):
+        self.releasesCombo.clear()
+        self.releasesList = []
+        self.releasesListID = []
+        try:
+            result = musicbrainzngs.search_releases(artist=artist, limit=200, primarytype = 'Album', strict=True)
+            for releases in result["release-list"]:
+                self.releasesList.append(releases["title"])
+                self.releasesListID.append(releases["id"])
+        except Exception as e:
+            print(e)
+        self.releasesCombo.addItems(self.releasesList)
+        
     def getTracklist(self, artist, album):
         tracklist = []
-        result = musicbrainzngs.search_releases(artist=artist, release=album, limit=1, primarytype = 'Album', strict=True)
-        id = result["release-list"][0]["id"]
-        print(f'{artist.title()} - {album.title()} ({result["release-list"][0]["date"][:4]})\nTracks:')
-        tracklist.append(f'{artist.title()} - {album.title()} ({result["release-list"][0]["date"][:4]})\nTracks:')
-        #### get tracklist
-        new_result = musicbrainzngs.get_release_by_id(id, includes=["recordings"])
-        t = (new_result["release"]["medium-list"][0]["track-list"])
-        for x in range(len(t)):
-            line = (t[x])
-            tracknumber = line["number"]
-            title = line["recording"]["title"]
-            tracklist.append(f'{tracknumber}. {title}')
-        tracks = ('\n'.join(tracklist))
-        print(tracks)
-        self.imageLabel.setText(tracks)
+        try:
+            result = musicbrainzngs.search_releases(artist=artist, release=album, limit=1, primarytype = 'Album', strict=True)
+            id = result["release-list"][0]["id"]
+            print(f'{artist.title()} - {album.title()}\nTracks:')
+            tracklist.append(f'{artist.title()} - {album.title()}\nTracks:')
+            #### get tracklist
+            new_result = musicbrainzngs.get_release_by_id(id, includes=["recordings"])
+            t = (new_result["release"]["medium-list"][0]["track-list"])
+            for x in range(len(t)):
+                line = (t[x])
+                tracknumber = line["number"]
+                title = line["recording"]["title"]
+                tracklist.append(f'{tracknumber}. {title}')
+            tracks = ('\n'.join(tracklist))
+            print(tracks)
+            self.imageLabel.setText(tracks)
+        except Exception as e:
+            print(e)
+            self.statusBar().showMessage("nothing found", 4000)
 
     def get_albumCover(self, artist, album):
         idList = []
@@ -82,18 +128,15 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"folder '{self.tempdirname}' already exists")
         result = musicbrainzngs.search_releases(artist=artist, release=album, limit=10, primarytype = 'Album', strict=True)
-        #print(result["release-list"][0])
         ### get all album ID
         for a in result["release-list"]:
             idList.append(a["id"])
         data = []
         
-        #print("idList:", idList)
         coverList = []
         for x in range(len(idList)):        
             try:    
                 id = idList[x]
-                #print(id)
                 data = musicbrainzngs.get_image_list(id)
                 url = data["images"][0]["image"]
                 coverList.append(url)
@@ -178,6 +221,15 @@ class MainWindow(QMainWindow):
         self.fileToolBar.addWidget(self.tracklistButton)
         self.fileToolBar.addSeparator()
         self.fileToolBar.addAction(self.saveAsAct)
+        self.addToolBarBreak()
+        self.releasesToolBar = self.addToolBar("Releases")
+        self.releasesToolBar.setStyleSheet("QToolBar {border: 0px;}")
+        self.releasesToolBar.setIconSize(QSize(16, 16))
+        self.releasesToolBar.setContextMenuPolicy(Qt.PreventContextMenu)
+        self.releasesToolBar.setMovable(False)
+        self.releasesToolBar.addWidget(self.releasesCombo)
+        self.releasesToolBar.addSeparator()
+        self.releasesToolBar.addWidget(self.releasesButton)
 
     def createStatusBar(self):
         self.statusBar().setStyleSheet("font-size: 8pt; color: #888a85;")
@@ -188,11 +240,8 @@ class MainWindow(QMainWindow):
         msg.exec()
 
 
-
 if __name__ == '__main__':
-
     import sys
-
     app = QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.show()
