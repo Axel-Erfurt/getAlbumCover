@@ -9,6 +9,8 @@ get Album Cover or Track List using musicbrainzngs
 
 ### Usage:
 
+python3 getAlbumCover.py
+
 You can type the Artist name and use get "all Artist releases", then use the Combo Box
 
 or
