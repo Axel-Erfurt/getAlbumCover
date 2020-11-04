@@ -23,7 +23,6 @@ class MainWindow(QMainWindow):
         self.setContentsMargins(10, 10, 10, 10)
         self.artist = ""
         self.album = ""
-        self.tempdirname = "/tmp/covers"
         self.img = ""
         
         self.releasesList = []
@@ -123,10 +122,6 @@ class MainWindow(QMainWindow):
 
     def get_albumCover(self, artist, album):
         idList = []
-        try:
-            os.mkdir(self.tempdirname)
-        except Exception as e:
-            print(f"folder '{self.tempdirname}' already exists")
         result = musicbrainzngs.search_releases(artist=artist, release=album, limit=10, primarytype = 'Album', strict=True)
         ### get all album ID
         for a in result["release-list"]:
@@ -137,31 +132,15 @@ class MainWindow(QMainWindow):
         for x in range(len(idList)):        
             try:    
                 id = idList[x]
-                data = musicbrainzngs.get_image_list(id)
-                url = data["images"][0]["image"]
-                coverList.append(url)
+                data = musicbrainzngs.get_image_front(id)                
+                qp = QPixmap()
+                qp.loadFromData(data)
+                h = self.imageLabel.height()
+                self.imageLabel.setPixmap(qp.scaledToHeight(h, 0))
                 break
             except Exception as e:
                 print(e)
-        print(f"Cover URLs: {coverList}")
-        if len(coverList) > 0:
-            ### download cover
-            url = coverList[0]
-            print(f'downloading Cover from URL: {url}')
 
-            r = requests.get(url, allow_redirects=True)
-            if r:
-                self.img = f"{self.tempdirname}/{album}.jpg"
-                with open(self.img, 'wb') as f:
-                    print("saving image")
-                    f.write(r.content)
-                    f.close()
-                    print("loading image into QLabel")
-                    self.statusBar().showMessage("loading image", 4000)
-                    h = self.imageLabel.height()
-                    pixmap = QPixmap(self.img)          
-                    self.imageLabel.setPixmap(pixmap.scaledToHeight(h, 0))
-                    f.close()
         
     def getCover(self):
         self.artist = self.artistEntry.text()
@@ -192,12 +171,9 @@ class MainWindow(QMainWindow):
     def saveAs(self):
         fileName, _ = QFileDialog.getSaveFileName(self, "Save File", f"front.jpg", "Images (*.jpg)")
         if fileName:
-            if os.path.isfile(self.img):
-                print(f"saving {fileName}")
-                copy(self.img, fileName)
-                self.statusBar().showMessage("File saved", 0)
-            else:
-                print(f"{self.img} does not exist")          
+            pix = QPixmap(self.imageLabel.pixmap())
+            if pix:
+                pix.save(fileName)         
 
     def createActions(self):
 
