@@ -91,7 +91,7 @@ class MainWindow(QMainWindow):
         self.releasesList = []
         self.releasesListID = []
         try:
-            result = musicbrainzngs.search_releases(artist=artist, limit=200, primarytype = 'Album', strict=True)
+            result = musicbrainzngs.search_releases(artist=artist, limit=99, primarytype = 'Album', strict=True)
             for releases in result["release-list"]:
                 self.releasesList.append(releases["title"])
                 self.releasesListID.append(releases["id"])
