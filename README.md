@@ -17,8 +17,8 @@ type Artist and Album Name
 
 use the "Save" Button to save the image.
 
-![alt text](https://github.com/Axel-Erfurt/getAlbumCover/blob/main/screenshot1.png)
+![alt text](https://github.com/Axel-Erfurt/getAlbumCover/blob/main/screenshot3.png)
 
-![alt text](https://github.com/Axel-Erfurt/getAlbumCover/blob/main/screenshot2.png)
+![alt text](https://github.com/Axel-Erfurt/getAlbumCover/blob/main/screenshot4.png)
 
 
